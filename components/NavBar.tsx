@@ -3,7 +3,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
-import { BellIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { BellIcon, Bars3Icon, XMarkIcon, Squares2X2Icon,
+  BookmarkIcon, } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function NavBar() {
@@ -89,7 +90,6 @@ export default function NavBar() {
         {/* ✅ Logo */}
         <Link href="/" className="flex items-center gap-2 text-xl font-bold text-blue-900">
           <Image src="/logo.png" width={40} height={40} alt="logo" className="rounded-full" />
-          St John AFM
         </Link>
 
         {/* ✅ Desktop actions */}
@@ -101,8 +101,16 @@ export default function NavBar() {
             </>
           ) : (
             <>
-              <Link href="/dashboard" className="btn">Dashboard</Link>
-              <Link href="/saved-events" className="btn">Saved Events</Link>
+            
+              <Link href="/dashboard" className="btn">
+              <Squares2X2Icon className="h-5 w-5 text-blue-600" />
+                  Dashboard
+              </Link>
+              
+              <Link href="/saved-events" className="btn">
+               <BookmarkIcon className="h-5 w-5 text-blue-600" />
+                Saved Events
+              </Link>
               <button className="btn" onClick={signOut}>Sign out</button>
 
               {/* 🔔 Notification Bell (Desktop) */}

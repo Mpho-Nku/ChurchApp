@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { fmtDate } from '@/lib/utils';
+import NoResults from '@/components/NoResults';
 
 export default function EventsPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -94,7 +95,9 @@ export default function EventsPage() {
 
   // ✅ Empty state
   if (events.length === 0) {
-    return <div className="text-gray-500 p-6">No events yet.</div>;
+    return <div className="text-gray-500 p-6">
+      <NoResults/>
+    </div>;
   }
 
   return (

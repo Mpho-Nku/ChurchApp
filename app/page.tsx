@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 import FeaturesGrid from '@/components/FeaturesGrid';
 import TrendingSection from '@/components/TrendsingSection';
-
+import FAQAccordion from '@/components/FAQAccordion';
 export default function Home() {
   const [churches, setChurches] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
@@ -43,8 +43,10 @@ export default function Home() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-8">
+      
       {/* ✅ Welcome card */}
       <section className="card p-6 space-y-4">
+     
         <h1 className="text-3xl font-bold text-blue-900">
           Welcome to St John Apostolic Faith Mission
         </h1>
@@ -105,8 +107,9 @@ export default function Home() {
           </div>
         )}
        <FeaturesGrid />
-      <TrendingSection />
-
+         {/*   <TrendingSection /> */}
+  
+     <FAQAccordion />
       </section>
 
       {/* ✅ Features grid (like Uber example you shared) */}
