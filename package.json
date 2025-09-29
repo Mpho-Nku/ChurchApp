@@ -12,14 +12,16 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@supabase/auth-helpers-nextjs": "0.10.0",
-    "@supabase/supabase-js": "2.45.4",
+    "@supabase/supabase-js": "^2.45.4",
     "clsx": "2.1.1",
     "date-fns": "3.6.0",
     "framer-motion": "^12.23.12",
     "lucide-react": "0.453.0",
     "next": "14.2.5",
+    "node-fetch": "^3.3.2",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "react-hot-toast": "^2.6.0"
   },
   "devDependencies": {
     "@types/react": "19.1.13",

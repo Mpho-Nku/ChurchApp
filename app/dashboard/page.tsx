@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import Notifications from '@/components/Notifications';
+import toast from 'react-hot-toast';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
@@ -49,7 +50,6 @@ function Labeled({ label, ...props }: any) {
 }
 
 /* --------------------- CREATE FORMS --------------------- */
-
 function CreateChurch() {
   const [form, setForm] = useState<any>({
     name: '',
@@ -72,17 +72,14 @@ function CreateChurch() {
     let imageUrl: string | null = null;
 
     if (file) {
-      const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${file.name}`;
       const filePath = `${fileName}`;
-
       const { error: uploadError } = await supabase.storage
         .from('church-images')
         .upload(filePath, file);
 
       if (uploadError) {
-        console.error('Image upload failed:', uploadError.message);
-        alert('Image upload failed: ' + uploadError.message);
+        toast.error('Image upload failed: ' + uploadError.message);
         return;
       }
 
@@ -98,10 +95,9 @@ function CreateChurch() {
     const { error } = await supabase.from('churches').insert(payload);
 
     if (error) {
-      console.error('Insert error:', error);
-      alert('Insert failed: ' + error.message);
+      toast.error('Insert failed: ' + error.message);
     } else {
-      alert('Church created');
+      toast.success('✅ Church created');
       setForm({
         name: '',
         pastor_name: '',
@@ -153,7 +149,6 @@ function CreateEvent() {
       .then(({ data }) => setChurches(data || []));
   }, []);
 
-  // Prepopulate location when church selected
   useEffect(() => {
     if (churchId) {
       const church = churches.find((c) => c.id === churchId);
@@ -165,13 +160,12 @@ function CreateEvent() {
   }, [churchId, churches]);
 
   const submit = async () => {
-    if (!churchId) return alert('Select church');
+    if (!churchId) return toast.error('Select church');
     const { error } = await supabase.from('events').insert({ ...form, church_id: churchId });
     if (error) {
-      console.error('Insert error:', error);
-      alert('Insert failed: ' + error.message);
+      toast.error('Insert failed: ' + error.message);
     } else {
-      alert('Event created');
+      toast.success('✅ Event created');
     }
   };
 
@@ -200,70 +194,81 @@ function CreateEvent() {
 /* --------------------- MANAGE LISTS --------------------- */
 function ManageEvents({ user, role }: { user: any; role: string }) {
   const [events, setEvents] = useState<any[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
   useEffect(() => {
     if (!user) return;
-    let query = supabase
-      .from('events')
-      .select('id, title, start_time, created_by');
+    let query = supabase.from('events').select('id, title, start_time, created_by');
     if (role !== 'admin') query = query.eq('created_by', user.id);
     query.order('created_at', { ascending: false }).then(({ data }) =>
       setEvents(data || [])
     );
   }, [user, role]);
 
-  const del = async (id: string) => {
-    if (confirm('Delete this event?')) {
-      await supabase.from('events').delete().eq('id', id);
-      setEvents(events.filter((e) => e.id !== id));
+  const handleDelete = async () => {
+    if (!selectedEvent) return;
+    const { error } = await supabase.from('events').delete().eq('id', selectedEvent.id);
+    if (error) {
+      toast.error('❌ Failed to delete event');
+    } else {
+      toast.success(`✅ ${selectedEvent.title} deleted`);
+      setEvents(events.filter((e) => e.id !== selectedEvent.id));
     }
+    setConfirmOpen(false);
   };
 
   return (
     <Card>
       <h3 className="font-semibold">Manage Events</h3>
-      {events.length === 0 && (
-        <p className="text-neutral-400 text-sm">No events yet.</p>
-      )}
+      {events.length === 0 && <p className="text-neutral-400 text-sm">No events yet.</p>}
       {events.map((ev) => (
-        <div
-          key={ev.id}
-          className="flex items-center justify-between border-b border-neutral-800 py-2"
-        >
-          <span>
-            {ev.title} ({new Date(ev.start_time).toLocaleDateString()})
-          </span>
+        <div key={ev.id} className="flex items-center justify-between border-b border-neutral-200 py-2">
+          <span>{ev.title} ({new Date(ev.start_time).toLocaleDateString()})</span>
           <div className="flex gap-2">
-            {/* ✅ Navigate to /events/[id]/edit instead of ?edit=true */}
-            <a className="btn" href={`/events/${ev.id}/edit`}>
-              Edit
-            </a>
-            <button className="btn" onClick={() => del(ev.id)}>
+            <a className="btn" href={`/events/${ev.id}/edit`}>Edit</a>
+            <button className="btn bg-red-100 text-red-600 hover:bg-red-200" onClick={() => { setSelectedEvent(ev); setConfirmOpen(true); }}>
               Delete
             </button>
           </div>
         </div>
       ))}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete Event"
+        message={`Are you sure you want to delete "${selectedEvent?.title}"?`}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </Card>
   );
 }
 
-
 function ManageChurches({ user, role }: { user: any; role: string }) {
   const [churches, setChurches] = useState<any[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedChurch, setSelectedChurch] = useState<any>(null);
 
   useEffect(() => {
     if (!user) return;
     let query = supabase.from('churches').select('id,name,pastor_name,created_by');
     if (role !== 'admin') query = query.eq('created_by', user.id);
-    query.order('created_at', { ascending: false }).then(({ data }) => setChurches(data || []));
+    query.order('created_at', { ascending: false }).then(({ data }) =>
+      setChurches(data || [])
+    );
   }, [user, role]);
 
-  const del = async (id: string) => {
-    if (confirm('Delete this church?')) {
-      await supabase.from('churches').delete().eq('id', id);
-      setChurches(churches.filter((c) => c.id !== id));
+  const handleDelete = async () => {
+    if (!selectedChurch) return;
+    const { error } = await supabase.from('churches').delete().eq('id', selectedChurch.id);
+    if (error) {
+      toast.error('❌ Failed to delete church');
+    } else {
+      toast.success(`✅ ${selectedChurch.name} deleted`);
+      setChurches(churches.filter((c) => c.id !== selectedChurch.id));
     }
+    setConfirmOpen(false);
   };
 
   return (
@@ -271,16 +276,24 @@ function ManageChurches({ user, role }: { user: any; role: string }) {
       <h3 className="font-semibold">Manage Churches</h3>
       {churches.length === 0 && <p className="text-neutral-400 text-sm">No churches yet.</p>}
       {churches.map((ch) => (
-        <div key={ch.id} className="flex items-center justify-between border-b border-neutral-800 py-2">
+        <div key={ch.id} className="flex items-center justify-between border-b border-neutral-200 py-2">
           <span>{ch.name} (Pastor: {ch.pastor_name || 'N/A'})</span>
           <div className="flex gap-2">
-            {/* ✅ Link to new edit page */}
             <a className="btn" href={`/churches/${ch.id}/edit`}>Edit</a>
-            <button className="btn" onClick={() => del(ch.id)}>Delete</button>
+            <button className="btn bg-red-100 text-red-600 hover:bg-red-200" onClick={() => { setSelectedChurch(ch); setConfirmOpen(true); }}>
+              Delete
+            </button>
           </div>
         </div>
       ))}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete Church"
+        message={`Are you sure you want to delete "${selectedChurch?.name}"?`}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </Card>
   );
 }
-

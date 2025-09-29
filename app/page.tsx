@@ -7,6 +7,7 @@ import Link from 'next/link';
 import FeaturesGrid from '@/components/FeaturesGrid';
 import TrendingSection from '@/components/TrendsingSection';
 import FAQAccordion from '@/components/FAQAccordion';
+import OnboardingModal from '@/components/OnboardingModal';
 export default function Home() {
   const [churches, setChurches] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
@@ -106,6 +107,7 @@ export default function Home() {
             ))}
           </div>
         )}
+       <OnboardingModal user={user} hasChurch={churches.length > 0} />
        <FeaturesGrid />
          {/*   <TrendingSection /> */}
   
