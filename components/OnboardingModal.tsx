@@ -1,129 +1,51 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
 
-export default function ChurchOnboardingPopup() {
-  const [showPopup, setShowPopup] = useState(false);
-  const [hasChurch, setHasChurch] = useState(false);
-  const [hasEvents, setHasEvents] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+import { useState, useEffect } from 'react';
+
+type OnboardingModalProps = {
+  user: any;
+  hasChurch: boolean;
+};
+
+export default function OnboardingModal({ user, hasChurch }: OnboardingModalProps) {
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const checkOnboarding = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setUser(user);
-
-      // ✅ fetch profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('onboarding_dismissed,onboarding_remind_until')
-        .eq('id', user.id)
-        .single();
-
-      setProfile(profileData);
-
-      // ✅ stop if dismissed permanently
-      if (profileData?.onboarding_dismissed) return;
-
-      // ✅ stop if remind later not expired
-      if (
-        profileData?.onboarding_remind_until &&
-        new Date(profileData.onboarding_remind_until) > new Date()
-      ) {
-        return;
+    if (user && !hasChurch) {
+      const dismissed = localStorage.getItem('onboardingDismissed');
+      if (!dismissed) {
+        setOpen(true);
       }
+    }
+  }, [user, hasChurch]);
 
-      // ✅ Check if user has church
-      const { data: churches } = await supabase
-        .from('churches')
-        .select('id')
-        .eq('created_by', user.id)
-        .limit(1);
-
-      const churchExists = churches && churches.length > 0;
-      setHasChurch(churchExists);
-
-      // ✅ Check events
-      if (churchExists) {
-        const { data: events } = await supabase
-          .from('events')
-          .select('id')
-          .eq('created_by', user.id)
-          .limit(1);
-
-        setHasEvents(events && events.length > 0);
-      }
-
-      if (!churchExists || (churchExists && !hasEvents)) {
-        setShowPopup(true);
-      }
-    };
-
-    checkOnboarding();
-  }, [hasEvents]);
-
-  // ✅ Permanent dismiss
-  const handleDismiss = async () => {
-    if (!user) return;
-    await supabase.from('profiles').update({ onboarding_dismissed: true }).eq('id', user.id);
-    setShowPopup(false);
+  const dismiss = () => {
+    localStorage.setItem('onboardingDismissed', 'true');
+    setOpen(false);
   };
 
-  // ✅ Remind me later (7 days)
-  const handleRemindLater = async () => {
-    if (!user) return;
-    const remindUntil = new Date();
-    remindUntil.setDate(remindUntil.getDate() + 7);
-    await supabase
-      .from('profiles')
-      .update({ onboarding_remind_until: remindUntil.toISOString() })
-      .eq('id', user.id);
-    setShowPopup(false);
-  };
-
-  if (!showPopup) return null;
+  if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg p-6 w-[90%] max-w-md text-center animate-fadeIn">
-        <h2 className="text-2xl font-bold text-blue-900">✨ Welcome!</h2>
-
-        {!hasChurch ? (
-          <p className="text-gray-600 mt-2">
-            Start by adding your church so members can connect and follow updates.
-          </p>
-        ) : !hasEvents ? (
-          <p className="text-gray-600 mt-2">
-            You already have a church 🎉. Next, add your first event to engage members!
-          </p>
-        ) : null}
-
-        <div className="mt-4 flex flex-wrap justify-center gap-3">
-          {!hasChurch ? (
-            <a href="/dashboard" className="btn btn-primary">
-              Add Church
-            </a>
-          ) : !hasEvents ? (
-            <a href="/dashboard" className="btn btn-primary">
-              Add Event
-            </a>
-          ) : null}
-
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+        <h2 className="text-xl font-bold mb-4 text-blue-900">Welcome to St John AFM!</h2>
+        <p className="text-gray-600 mb-4">
+          Help others discover your church! Add your church and upcoming events so members and visitors can stay connected.
+        </p>
+        <div className="flex justify-end gap-2">
           <button
-            onClick={handleRemindLater}
-            className="btn border text-gray-600 hover:bg-gray-100"
+            onClick={dismiss}
+            className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
           >
-            Remind Me Later
+            Dismiss
           </button>
-
-          <button
-            onClick={handleDismiss}
-            className="btn border text-gray-600 hover:bg-gray-100"
+          <a
+            href="/dashboard"
+            className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
           >
-            Not Now
-          </button>
+            Add Church
+          </a>
         </div>
       </div>
     </div>
