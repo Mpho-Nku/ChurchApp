@@ -29,6 +29,6 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
-  ],
+, "components/Notifications.jsx"  ],
   "exclude": ["node_modules"]
 }
