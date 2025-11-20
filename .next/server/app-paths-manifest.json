@@ -1,3 +1,8 @@
 {
-  "/page": "app/page.js"
+  "/page": "app/page.js",
+  "/feed/page": "app/feed/page.js",
+  "/churches/[id]/page": "app/churches/[id]/page.js",
+  "/onboarding/church/page": "app/onboarding/church/page.js",
+  "/onboarding/church/add/page": "app/onboarding/church/add/page.js",
+  "/auth/page": "app/auth/page.js"
 }

@@ -8,6 +8,8 @@ import FeaturesGrid from '@/components/FeaturesGrid';
 import TrendingSection from '@/components/TrendsingSection';
 import FAQAccordion from '@/components/FAQAccordion';
 import OnboardingModal from '@/components/OnboardingModal';
+
+
 export default function Home() {
   const [churches, setChurches] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
