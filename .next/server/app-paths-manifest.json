@@ -1,8 +1,0 @@
-{
-  "/churches/[id]/page": "app/churches/[id]/page.js",
-  "/churches/page": "app/churches/page.js",
-  "/profile/page": "app/profile/page.js",
-  "/events/[id]/page": "app/events/[id]/page.js",
-  "/page": "app/page.js",
-  "/churches/[id]/edit/page": "app/churches/[id]/edit/page.js"
-}
