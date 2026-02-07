@@ -1,50 +1,43 @@
 "use client";
 
-import { useState } from "react";
+const churchTypes = ["Circuit", "Headquarter"];
 
-export default function Step3Type({ value, onUpdate, onNext, onBack }) {
-  const [type, setType] = useState(value || "");
-
-  const handleNext = () => {
-    if (!type.trim()) {
-      alert("Select church type");
-      return;
-    }
-    onUpdate({ church_type: type });
-    onNext();
-  };
-
-  const types = ["Local Assembly", "Branch", "Circuit HQ", "Regional HQ"];
-
+export default function Step3Type({ formData, setFormData, next, back }) {
   return (
     <div>
-      <h2 className="text-2xl font-semibold mb-3">Church Type</h2>
+      <h2 className="text-xl font-semibold mb-4">Step 3: Church Type</h2>
 
-      <div className="grid grid-cols-1 gap-3 mb-6">
-        {types.map((t) => (
+      <div className="grid gap-3">
+        {churchTypes.map((type) => (
           <button
-            key={t}
-            onClick={() => setType(t)}
-            className={`border px-4 py-3 rounded-lg text-left ${
-              type === t ? "border-blue-600 bg-blue-50" : "border-gray-300"
+            key={type}
+            type="button"
+            className={`p-3 border rounded-lg ${
+              formData.churchType === type
+                ? "bg-blue-600 text-white"
+                : ""
             }`}
+            onClick={() =>
+              setFormData((prev) => ({ ...prev, churchType: type }))
+            }
           >
-            {t}
+            {type}
           </button>
         ))}
       </div>
 
-      <div className="flex gap-3">
-        <button
-          onClick={onBack}
-          className="flex-1 bg-gray-200 py-3 rounded-lg">
+      <div className="flex justify-between mt-6">
+        <button type="button" onClick={back} className="border px-4 py-2 rounded-lg">
           Back
         </button>
 
         <button
-          onClick={handleNext}
-          className="flex-1 bg-blue-600 text-white py-3 rounded-lg">
-          Continue
+          type="button"
+          onClick={next}
+          disabled={!formData.churchType}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+        >
+          Next
         </button>
       </div>
     </div>

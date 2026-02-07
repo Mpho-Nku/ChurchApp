@@ -1,161 +1,237 @@
-'use client';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import { fmtDate } from '@/lib/utils';
-import NoResults from '@/components/NoResults';
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+
+type Event = {
+  id: string;
+  title: string;
+  start_time: string;
+  churches?: {
+    image_url?: string | null;
+  };
+};
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<any[]>([]);
-  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
+
+  const [events, setEvents] = useState<Event[]>([]);
+  const [filtered, setFiltered] = useState<Event[]>([]);
+  const [filter, setFilter] = useState<"all" | "weekend" | "month">("all");
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  /** ---------- DATE HELPERS ---------- */
+
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  const endOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
+  const getWeekendRange = () => {
+    const today = new Date();
+    const day = today.getDay(); // 0 = Sun, 6 = Sat
+
+    let saturday = new Date(today);
+    let sunday = new Date(today);
+
+    if (day === 6) {
+      sunday.setDate(today.getDate() + 1);
+    } else if (day === 0) {
+      saturday = new Date(today);
+    } else {
+      saturday.setDate(today.getDate() + (6 - day));
+      sunday.setDate(saturday.getDate() + 1);
+    }
+
+    return {
+      start: startOfDay(saturday),
+      end: endOfDay(sunday),
+    };
+  };
+
+  const getMonthRange = () => {
+    const now = new Date();
+    return {
+      start: startOfDay(now),
+      end: endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+    };
+  };
+
+  /** ---------- LOAD EVENTS ---------- */
 
   useEffect(() => {
-    (async () => {
-      try {
-        // ✅ Get current user
-        const { data: userData } = await supabase.auth.getUser();
-        setUser(userData?.user);
+    const loadEvents = async () => {
+      const { data } = await supabase
+        .from("events")
+        .select(
+          `
+          id,
+          title,
+          start_time,
+          churches (
+            image_url
+          )
+        `
+        )
+        .order("start_time", { ascending: true });
 
-        // ✅ Fetch all events with optional church info
-        const { data, error } = await supabase
-          .from('events')
-          .select(`
-            id,
-            title,
-            start_time,
-            description,
-            is_saved_by,
-            church:church_id (
-              id,
-              name,
-              suburb,
-              township
-            )
-          `)
-          .order('start_time', { ascending: true });
+      setEvents(data || []);
+      setFiltered(data || []);
+      setLoading(false);
+    };
 
-        if (error) {
-          console.error('❌ Events fetch error:', error.message);
-          setErrorMsg(error.message);
-        } else {
-          setEvents(data || []);
-        }
-      } catch (err: any) {
-        console.error('❌ Unexpected error:', err);
-        setErrorMsg('Something went wrong loading events.');
-      } finally {
-        setLoading(false);
-      }
-    })();
+    loadEvents();
   }, []);
 
-  // ✅ Save / Unsave toggle
-  const toggleSave = async (event: any) => {
-    if (!user) {
-      alert('Please login to save events');
+  /** ---------- APPLY FILTER ---------- */
+
+  useEffect(() => {
+    if (!events.length) return;
+
+    if (filter === "all") {
+      setFiltered(events);
       return;
     }
 
-    const alreadySaved = event.is_saved_by?.includes(user.id);
-    const updatedSavedBy = alreadySaved
-      ? event.is_saved_by.filter((uid: string) => uid !== user.id)
-      : [...(event.is_saved_by || []), user.id];
+    if (filter === "weekend") {
+      const { start, end } = getWeekendRange();
+      setFiltered(
+        events.filter((ev) => {
+          const d = new Date(ev.start_time);
+          return d >= start && d <= end;
+        })
+      );
+      return;
+    }
 
-    const { error } = await supabase
-      .from('events')
-      .update({ is_saved_by: updatedSavedBy })
-      .eq('id', event.id);
-
-    if (error) {
-      console.error('❌ Save/Unsave error:', error.message);
-      alert('Something went wrong, please try again');
-    } else {
-      // ✅ update UI immediately
-      setEvents((prev) =>
-        prev.map((ev) =>
-          ev.id === event.id ? { ...ev, is_saved_by: updatedSavedBy } : ev
-        )
+    if (filter === "month") {
+      const { start, end } = getMonthRange();
+      setFiltered(
+        events.filter((ev) => {
+          const d = new Date(ev.start_time);
+          return d >= start && d <= end;
+        })
       );
     }
-  };
+  }, [filter, events]);
 
-  // ✅ Loading state
-  if (loading) return <div className="text-gray-500">Loading events...</div>;
-
-  // ✅ Error state
-  if (errorMsg) {
-    return (
-      <div className="max-w-2xl mx-auto p-6 text-red-600">
-        Failed to load events: {errorMsg}
-      </div>
-    );
-  }
-
-  // ✅ Empty state
-  if (events.length === 0) {
-    return <div className="text-gray-500 p-6">
-      <NoResults/>
-    </div>;
-  }
+  if (loading) return <p className="p-6">Loading events…</p>;
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold mb-4">Upcoming Events</h1>
-      <div className="grid gap-4">
-        {events.map((event) => {
-          const isSaved = user && event.is_saved_by?.includes(user.id);
-          return (
-            <div
-              key={event.id}
-              className="p-4 border border-gray-200 bg-white rounded-lg shadow-sm hover:shadow-md transition"
-            >
-              {/* Title */}
-              <h2 className="text-lg font-semibold text-blue-900">
-                <Link href={`/events/${event.id}`}>{event.title}</Link>
-              </h2>
+    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
 
-              {/* Date */}
-              <div className="text-sm text-blue-600">
-                {fmtDate(event.start_time)}
-              </div>
+      {/* ← BACK TO HOME */}
+      <button
+        onClick={() => router.push("/")}
+        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+      >
+        ← Back
+      </button>
 
-              {/* Description */}
-              <p className="text-sm text-gray-600 line-clamp-2 mt-1">
-                {event.description || 'No description'}
-              </p>
+      <div className="flex items-center gap-3">
+  <h1 className="text-2xl font-bold">Events</h1>
 
-              {/* Church Info */}
-              {event.church && (
-                <p className="text-xs text-gray-500 mt-2">
-                  {event.church.name} – {event.church.suburb},{' '}
-                  {event.church.township}
-                </p>
-              )}
+  <div className="ml-auto flex gap-2">
+    <Link
+      href="/events/saved"
+      className="px-4 py-2 border rounded-lg"
+    >
+      ⭐ Saved
+    </Link>
 
-              {/* Buttons */}
-              <div className="mt-3">
-                {!user ? (
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => alert('Please login to save events')}
-                  >
-                    Login to Save
-                  </button>
-                ) : (
-                  <button
-                    className={`btn ${isSaved ? 'bg-gray-300 text-black' : 'btn-primary'}`}
-                    onClick={() => toggleSave(event)}
-                  >
-                    {isSaved ? 'Unsave' : 'Save'}
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
+    <Link
+      href="/events/add"
+      className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+    >
+      Add Event
+    </Link>
+  </div>
+</div>
+
+      {/* FILTERS */}
+      <div className="flex gap-3">
+        <button
+          onClick={() => setFilter("all")}
+          className={`px-4 py-2 rounded-lg border ${
+            filter === "all"
+              ? "bg-blue-600 text-white border-blue-600"
+              : "bg-white border-gray-300"
+          }`}
+        >
+          All Events
+        </button>
+
+        <button
+          onClick={() => setFilter("weekend")}
+          className={`px-4 py-2 rounded-lg border ${
+            filter === "weekend"
+              ? "bg-blue-600 text-white border-blue-600"
+              : "bg-white border-gray-300"
+          }`}
+        >
+          This Weekend
+        </button>
+
+        <button
+          onClick={() => setFilter("month")}
+          className={`px-4 py-2 rounded-lg border ${
+            filter === "month"
+              ? "bg-blue-600 text-white border-blue-600"
+              : "bg-white border-gray-300"
+          }`}
+        >
+          This Month
+        </button>
       </div>
+
+      {/* EVENTS GRID */}
+      {filtered.length === 0 ? (
+        <p className="text-gray-500 mt-4">No events found.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {filtered.map((ev) => {
+            const img =
+              ev.churches?.image_url || "/default_church.jpg";
+
+            return (
+              <Link
+                key={ev.id}
+                href={`/events/${ev.id}`}
+                className="block rounded-xl border bg-white shadow hover:shadow-lg transition"
+              >
+                <div className="relative h-48 rounded-t-xl overflow-hidden">
+                  <Image
+                    src={img}
+                    alt={ev.title}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+
+                <div className="p-4">
+                  <h3 className="font-semibold text-lg">
+                    {ev.title}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {new Date(ev.start_time).toLocaleDateString("en-ZA", {
+                      weekday: "short",
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

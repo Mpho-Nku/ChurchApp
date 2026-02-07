@@ -2,92 +2,90 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import SettingsSection from "@/components/settings/SettingsSection";
+import Switch from "@/components/settings/Switch";
 
-export default function NotificationSettingsPage() {
-  const [settings, setSettings] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
+export default function NotificationSettings() {
+  const [settings, setSettings] = useState({
+    mentions: true,
+    comment_replies: true,
+    post_likes: true,
+    comment_likes: true,
+  });
 
   const load = async () => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    setUser(user);
 
     if (!user) return;
 
     const { data } = await supabase
-      .from("notification_settings")
+      .from("user_settings")
       .select("*")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (!data) {
-      // Auto-create
-      const { data: newRow } = await supabase
-        .from("notification_settings")
-        .insert({ user_id: user.id })
-        .select()
-        .single();
-
-      setSettings(newRow);
-      return;
-    }
-
-    setSettings(data);
+    if (data) setSettings(data);
   };
 
-  const toggle = async (field: string) => {
-    const newValue = !settings[field];
+  const saveSetting = async (field: string, value: boolean) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
 
-    setSettings((prev: any) => ({
-      ...prev,
-      [field]: newValue,
-    }));
+    setSettings(prev => ({ ...prev, [field]: value }));
 
     await supabase
-      .from("notification_settings")
-      .update({
-        [field]: newValue,
-        updated_at: new Date(),
-      })
-      .eq("user_id", user.id);
+      .from("user_settings")
+      .upsert({
+        user_id: user.id,
+        [field]: value,
+      });
   };
 
   useEffect(() => {
     load();
   }, []);
 
-  if (!settings) return <p className="p-4">Loading…</p>;
-
-  const toggleItem = (field: string, label: string) => (
-    <div
-      className="flex items-center justify-between py-4 border-b cursor-pointer"
-      onClick={() => toggle(field)}
-    >
-      <p className="text-sm font-medium">{label}</p>
-      <div
-        className={`w-10 h-5 rounded-full flex items-center transition ${
-          settings[field] ? "bg-blue-500" : "bg-gray-300"
-        }`}
-      >
-        <div
-          className={`w-4 h-4 bg-white rounded-full ml-1 transform transition ${
-            settings[field] ? "translate-x-5" : ""
-          }`}
-        />
-      </div>
-    </div>
-  );
-
   return (
-    <div className="max-w-xl mx-auto p-4">
-      <h1 className="text-xl font-bold mb-4">Notifications</h1>
+    <div className="max-w-xl mx-auto px-4 py-8 space-y-10">
+      <h1 className="text-xl font-bold">Notification Preferences</h1>
 
-      {toggleItem("notify_comments", "Comments")}
-      {toggleItem("notify_replies", "Replies to my comments")}
-      {toggleItem("notify_mentions", "Mentions (@username)")}
-      {toggleItem("notify_likes", "Likes on my posts")}
-      {toggleItem("notify_follows", "New followers")}
+      <SettingsSection title="Activity">
+        <div className="flex items-center justify-between px-4 py-4 bg-white border-b">
+          <span>Mentions</span>
+          <Switch
+            checked={settings.mentions}
+            onChange={(v) => saveSetting("mentions", v)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between px-4 py-4 bg-white border-b">
+          <span>Comment Replies</span>
+          <Switch
+            checked={settings.comment_replies}
+            onChange={(v) => saveSetting("comment_replies", v)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between px-4 py-4 bg-white border-b">
+          <span>Post Likes</span>
+          <Switch
+            checked={settings.post_likes}
+            onChange={(v) => saveSetting("post_likes", v)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between px-4 py-4 bg-white">
+          <span>Comment Likes</span>
+          <Switch
+            checked={settings.comment_likes}
+            onChange={(v) => saveSetting("comment_likes", v)}
+          />
+        </div>
+      </SettingsSection>
     </div>
   );
 }

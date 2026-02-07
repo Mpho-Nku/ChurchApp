@@ -1,87 +1,114 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { MapPin } from "lucide-react";
+import Link from "next/link";
 
-export default function ChurchOnboarding() {
-  const router = useRouter();
-  const [search, setSearch] = useState("");
-  const [results, setResults] = useState([]);
-  const [user, setUser] = useState(null);
+export default function SelectChurchPage() {
+  const [query, setQuery] = useState("");
+  const [churches, setChurches] = useState<any[]>([]);
 
+  // Fetch Churches
   useEffect(() => {
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return router.push("/auth");
-      setUser(user);
+      const { data } = await supabase
+        .from("churches")
+        .select(
+          "id, name, street, suburb, township, province, area_code, pastor_name"
+        )
+        .order("name");
+
+      if (data) setChurches(data);
     };
     load();
   }, []);
 
-  useEffect(() => {
-    const searchChurches = async () => {
-      if (search.length < 2) {
-        setResults([]);
-        return;
-      }
-
-      const { data } = await supabase
-        .from("churches")
-        .select("*")
-        .ilike("name", `%${search}%`)
-        .limit(10);
-
-      setResults(data || []);
-    };
-
-    searchChurches();
-  }, [search]);
-
-  const selectChurch = async (church) => {
-    await supabase
-      .from("profiles")
-      .update({ church_id: church.id })
-      .eq("id", user.id);
-
-    router.push("/onboarding/events");
-  };
+  // Filter by name or address
+  const filtered = churches.filter((c) => {
+    const t = query.toLowerCase();
+    return (
+      c.name?.toLowerCase().includes(t) ||
+      c.street?.toLowerCase().includes(t) ||
+      c.suburb?.toLowerCase().includes(t) ||
+      c.township?.toLowerCase().includes(t) ||
+      c.province?.toLowerCase().includes(t) ||
+      c.area_code?.toLowerCase().includes(t)
+    );
+  });
 
   return (
-    <div className="p-5 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Which church do you attend?</h1>
+    <div className="w-full h-screen flex items-start justify-center bg-white pt-20 px-4">
 
-      {/* Search Input */}
-      <div className="flex items-center gap-2 border rounded-lg px-3 py-2">
-        <Search className="text-gray-400" size={20} />
-        <input
-          className="flex-1 outline-none"
-          placeholder="Search for your church…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+      {/* MODAL CONTAINER */}
+      <div className="w-full max-w-3xl bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 
-      <div className="mt-5 space-y-3">
-        {results.map((c) => (
-          <button
-            key={c.id}
-            className="w-full text-left p-3 border rounded-lg hover:bg-gray-50"
-            onClick={() => selectChurch(c)}
-          >
-            <p className="font-semibold">{c.name}</p>
-            {c.city && <p className="text-sm text-gray-500">{c.city}</p>}
-          </button>
-        ))}
+        {/* HEADER */}
+        <div className="px-6 py-5 border-b">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Which church do you attend?
+          </h1>
+        </div>
 
-        {/* Not listed */}
-        <button
-          onClick={() => router.push("/onboarding/church/add")}
-          className="mt-5 w-full py-3 border rounded-lg text-blue-600 font-semibold"
+        {/* SEARCH */}
+        <div className="px-6 py-3 border-b">
+          <input
+            className="w-full bg-gray-100 px-4 py-3 rounded-xl text-lg outline-none border border-gray-300 focus:ring-2 focus:ring-blue-500"
+            placeholder="Search for your church..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+
+        {/* RESULTS LIST */}
+        <div className="max-h-[420px] overflow-y-auto">
+
+          {filtered.length === 0 ? (
+            <div className="px-6 py-10 text-center text-gray-500">
+              No churches found.
+            </div>
+          ) : (
+            filtered.map((c) => {
+              const address = [
+                c.street,
+                c.suburb,
+                c.township,
+                c.province,
+                c.area_code,
+              ]
+                .filter(Boolean)
+                .join(", ");
+
+              return (
+                <Link
+                  key={c.id}
+                  href={`/churches/${c.id}`}
+                  className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 border-b cursor-pointer"
+                >
+                  <div className="flex items-center justify-center w-10 h-10 bg-blue-50 text-blue-600 rounded-full">
+                    <MapPin size={20} />
+                  </div>
+
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-gray-900 text-lg">
+                      {c.name}
+                    </span>
+
+                    <span className="text-gray-600 text-sm">{address}</span>
+                  </div>
+                </Link>
+              );
+            })
+          )}
+        </div>
+
+        {/* ACTION BUTTON */}
+        <Link
+          href="/onboarding/church/add"
+          className="block w-full text-center py-4 text-blue-700 font-semibold hover:bg-blue-50 border-t"
         >
           My Church is not listed
-        </button>
+        </Link>
       </div>
     </div>
   );

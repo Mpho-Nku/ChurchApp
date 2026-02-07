@@ -1,167 +1,154 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
-import Image from 'next/image';
-import Link from 'next/link';
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-export default function ChurchDetailsPage() {
-  const { id } = useParams(); // ✅ church id from the URL
+import ChurchTypeTag from "@/components/churches/ChurchTypeTag";
+
+export default function ChurchDetails({ params }: any) {
+  const { id } = params;
+  const router = useRouter();
+
   const [church, setChurch] = useState<any>(null);
   const [events, setEvents] = useState<any[]>([]);
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [weather, setWeather] = useState<any>(null);
 
   useEffect(() => {
-    if (!id) return;
-
-    // ✅ Get logged-in user
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
-
-    // ✅ Fetch church details
-    const fetchChurch = async () => {
-      const { data, error } = await supabase
-        .from('churches')
-        .select('*')
-        .eq('id', id)
+    const loadChurch = async () => {
+      const { data } = await supabase
+        .from("churches")
+        .select("*")
+        .eq("id", id)
         .single();
 
-      if (!error && data) {
-        setChurch(data);
-
-        // ✅ Fetch weather using lat/lon if available
-        if (data.latitude && data.longitude) {
-          fetch(
-            `https://api.openweathermap.org/data/2.5/weather?lat=${data.latitude}&lon=${data.longitude}&appid=${process.env.NEXT_PUBLIC_WEATHER_API_KEY}&units=metric`
-          )
-            .then((res) => res.json())
-            .then((weatherData) => {
-              if (weatherData && weatherData.main) {
-                setWeather(weatherData);
-              }
-            })
-            .catch((err) => console.error('Weather fetch error:', err));
-        }
-      }
+      setChurch(data);
     };
 
-    // ✅ Fetch events for this church
-    const fetchEvents = async () => {
-      const { data, error } = await supabase
-        .from('events')
-        .select('id, title, start_time, description')
-        .eq('church_id', id)
-        .order('start_time', { ascending: true });
+    const loadEvents = async () => {
+      const { data } = await supabase
+        .from("events")
+        .select("*")
+        .eq("church_id", id)
+        .order("start_time", { ascending: true });
 
-      if (!error) setEvents(data || []);
+      setEvents(data || []);
     };
 
-    Promise.all([fetchChurch(), fetchEvents()]).finally(() =>
-      setLoading(false)
-    );
+    loadChurch();
+    loadEvents();
   }, [id]);
 
-  if (loading) return <p>Loading church details...</p>;
-  if (!church) return <p>Church not found.</p>;
+  if (!church) {
+    return (
+      <p className="p-10 text-center text-gray-500">
+        Loading church…
+      </p>
+    );
+  }
+
+  const img = church.image_url || "/default_church.jpg";
+
+  const fullAddress = [
+    church.street,
+    church.suburb,
+    church.township,
+    church.province,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-      {/* ✅ Church Info */}
-      <div className="rounded-xl border p-6 bg-white shadow">
-        {church.images && church.images.length > 0 ? (
-          <Image
-            src={church.images[0]}
-            alt={church.name}
-            width={800}
-            height={400}
-            className="w-full h-64 object-cover rounded-lg"
-          />
-        ) : (
-          <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-            No Image
-          </div>
-        )}
+    <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
+      {/* ← BACK (EXPLICIT, NOT history-based) */}
+      <button
+        onClick={() => router.push("/churches")}
+        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+      >
+        ← Back to Churches
+      </button>
 
-        <h1 className="text-3xl font-bold text-blue-900 mt-4">
-          {church.name}
-        </h1>
-        <p className="text-lg text-gray-600">
-          Pastor: {church.pastor_name || 'N/A'}
+      {/* IMAGE */}
+      <div className="w-full h-72 relative rounded-xl overflow-hidden bg-gray-200">
+        <Image
+          src={img}
+          alt={church.name}
+          fill
+          className="object-cover"
+        />
+      </div>
+
+      {/* DETAILS */}
+      <div className="bg-white p-6 rounded-xl shadow space-y-4">
+        {/* NAME + TAG */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-3xl font-bold text-blue-900">
+            {church.name}
+          </h1>
+
+          <ChurchTypeTag type={church.church_type} />
+        </div>
+
+        <p className="text-gray-700">
+          <strong>Pastor:</strong>{" "}
+          {church.pastor_name || "N/A"}
         </p>
 
-        {/* ✅ Full Address */}
-        <p className="text-sm text-gray-500 mt-2">
-          {church.unit_number ? `Unit ${church.unit_number}, ` : ''}
-          {church.street ? `${church.street}, ` : ''}
-          {church.suburb ? `${church.suburb}, ` : ''}
-          {church.township ? `${church.township}, ` : ''}
-          {church.area_code || ''}
+        <p className="text-gray-700">
+          <strong>Location:</strong>{" "}
+          {fullAddress || "To be announced"}
         </p>
 
-        {/* ✅ Weather Section */}
-        {weather && (
-          <div className="mt-3 flex items-center gap-3 text-sm text-gray-700 bg-blue-50 p-3 rounded-lg">
-            <Image
-              src={`https://openweathermap.org/img/wn/${weather.weather[0].icon}.png`}
-              alt={weather.weather[0].description}
-              width={40}
-              height={40}
-            />
-            <div>
-              <p className="font-medium">
-                {weather.main.temp}°C – {weather.weather[0].description}
-              </p>
-              <p className="text-xs text-gray-500">
-                Feels like {weather.main.feels_like}°C | Humidity{' '}
-                {weather.main.humidity}%
-              </p>
-            </div>
-          </div>
+        {church.description && (
+          <p className="text-gray-700 whitespace-pre-wrap">
+            {church.description}
+          </p>
         )}
 
-        {/* ✅ Get Directions button */}
-        {user && (
+        {fullAddress && (
           <a
-            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-              `${church.street || ''}, ${church.suburb || ''}, ${
-                church.township || ''
-              }, ${church.area_code || ''}`
+            className="inline-flex items-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition"
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+              fullAddress
             )}`}
             target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 inline-block btn btn-primary"
           >
-            Get Directions
+            📍 Get Directions
           </a>
         )}
       </div>
 
-      {/* ✅ Church Events */}
-      <section>
-        <h2 className="text-2xl font-bold text-blue-900 mb-4">
-          Upcoming Events
-        </h2>
+      {/* EVENTS */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-blue-900">
+            Upcoming Events
+          </h2>
+        </div>
+
         {events.length === 0 ? (
-          <p className="text-gray-500">No events scheduled for this church.</p>
+          <p className="text-gray-500">
+            No events scheduled.
+          </p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {events.map((ev) => (
-              <div
+              <Link
                 key={ev.id}
-                className="p-4 border rounded-lg bg-white shadow-sm hover:shadow-md transition"
+                href={`/events/${ev.id}`}
+                className="block p-4 bg-gray-50 rounded-lg shadow hover:shadow-md transition"
               >
-                <h3 className="text-lg font-semibold text-blue-800">
-                  <Link href={`/events/${ev.id}`}>{ev.title}</Link>
+                <h3 className="font-semibold text-gray-900">
+                  {ev.title}
                 </h3>
-                <p className="text-sm text-gray-500">
-                  {new Date(ev.start_time).toLocaleString()}
-                </p>
-                <p className="text-sm text-gray-600 mt-2">
-                  {ev.description || 'No description available'}
-                </p>
-              </div>
+
+                {ev.start_time && (
+                  <p className="text-sm text-gray-600">
+                    {new Date(ev.start_time).toLocaleDateString()}
+                  </p>
+                )}
+              </Link>
             ))}
           </div>
         )}

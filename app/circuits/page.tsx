@@ -14,7 +14,7 @@ export default function CircuitsPage() {
       <div className="grid md:grid-cols-2 gap-4">
         {circuits.map(c => (
           <Link key={c.id} href={`/circuits/${c.id}`} className="card p-4 space-y-2">
-            <h3 className="text-lg font-semibold">{c.name}</h3>
+            <h3 className="text-lg font-semibold">{c.pastor_name}</h3>
             <p className="text-neutral-400">{c.township || c.suburb}</p>
           </Link>
         ))}

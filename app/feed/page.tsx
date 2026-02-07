@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabaseClient";
-
+import { useRouter } from "next/navigation";
 // Components
 import PostReactions from "@/components/PostReactions";
 import CommentModal from "@/components/CommentModal";
@@ -18,7 +18,7 @@ import { deletePostWithMedia } from "@/lib/deletePost";
 
 
 export default function Feed() {
-
+const router = useRouter();
   useEffect(() => {
   const enforce = async () => {
     const { data: { user } } = await supabase.auth.getUser();

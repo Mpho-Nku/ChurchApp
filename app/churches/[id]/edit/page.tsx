@@ -1,81 +1,140 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+"use client";
 
-export default function EditChurch() {
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+
+export default function EditChurchPage() {
   const { id } = useParams();
   const router = useRouter();
-  const [form, setForm] = useState<any>(null);
+  const supabase = createClientComponentClient();
 
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const [form, setForm] = useState({
+    name: "",
+    pastor_name: "",
+    township: "",
+    description: "",
+  });
+
+  // 1️⃣ Load church
   useEffect(() => {
-    supabase.from('churches').select('*').eq('id', id).single().then(({ data }) => {
-      if (data) setForm(data);
-    });
-  }, [id]);
+    const loadChurch = async () => {
+      const { data, error } = await supabase
+        .from("churches")
+        .select("name, pastor_name, township, description")
+        .eq("id", id)
+        .single();
 
-  const updateChurch = async () => {
-    const { error } = await supabase.from('churches').update(form).eq('id', id);
-    if (error) {
-      alert('Update failed: ' + error.message);
-    } else {
-      alert('Church updated');
-      router.push(`/churches/${id}`);
+      if (error) {
+        setError("You are not allowed to edit this church");
+        setLoading(false);
+        return;
+      }
+
+      setForm({
+        name: data.name ?? "",
+        pastor_name: data.pastor_name ?? "",
+        township: data.township ?? "",
+        description: data.description ?? "",
+      });
+
+      setLoading(false);
+    };
+
+    loadChurch();
+  }, [id, supabase]);
+
+  // 2️⃣ Save updates
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setError("");
+
+      const { error } = await supabase
+        .from("churches")
+        .update({
+          name: form.name.trim(),
+          pastor_name: form.pastor_name || null,
+          township: form.township || null,
+          description: form.description || null,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      router.push("/churches"); // back to list
+    } catch (err) {
+      setError("Failed to save changes");
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (!form) return <div>Loading...</div>;
+  if (loading) return <p>Loading…</p>;
 
   return (
-    <div className="max-w-lg mx-auto p-6 bg-white rounded-lg shadow-md space-y-4">
-      <h2 className="text-xl font-bold">Edit Church</h2>
+    <div className="max-w-xl mx-auto p-6">
+      <h1 className="text-2xl font-semibold mb-6">Edit Church</h1>
+
+      {error && <p className="text-red-600 mb-4">{error}</p>}
+
       <input
-        className="input"
+        className="w-full border p-2 rounded mb-3"
+        placeholder="Church Name"
         value={form.name}
-        onChange={(e) => setForm({ ...form, name: e.target.value })}
+        onChange={(e) =>
+          setForm((p) => ({ ...p, name: e.target.value }))
+        }
       />
+
       <input
-        className="input"
+        className="w-full border p-2 rounded mb-3"
+        placeholder="Pastor Name"
         value={form.pastor_name}
-        onChange={(e) => setForm({ ...form, pastor_name: e.target.value })}
-      />
-
-       <input
-        className="input"
-        value={form.street}
-        onChange={(e) => setForm({ ...form, street: e.target.value })}
-      />
-
-        <input
-        className="input"
-        value={form.suburb}
-        onChange={(e) => setForm({ ...form, suburb: e.target.value })}
-      />
-
-     <input
-        className="input"
-        value={form.township}
-        onChange={(e) => setForm({ ...form, township: e.target.value })}
+        onChange={(e) =>
+          setForm((p) => ({ ...p, pastor_name: e.target.value }))
+        }
       />
 
       <input
-        className="input"
-        value={form.code}
-        onChange={(e) => setForm({ ...form, code: e.target.value })}
+        className="w-full border p-2 rounded mb-3"
+        placeholder="Township / Location"
+        value={form.township}
+        onChange={(e) =>
+          setForm((p) => ({ ...p, township: e.target.value }))
+        }
       />
 
-       <input
-        className="input"
-        value={form.township}
-        onChange={(e) => setForm({ ...form, township: e.target.value })}
-      />
-     
       <textarea
-        className="input"
-        value={form.description || ''}
-        onChange={(e) => setForm({ ...form, description: e.target.value })}
+        className="w-full border p-2 rounded mb-4"
+        placeholder="Description"
+        rows={4}
+        value={form.description}
+        onChange={(e) =>
+          setForm((p) => ({ ...p, description: e.target.value }))
+        }
       />
-      <button className="btn btn-primary" onClick={updateChurch}>Save</button>
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => router.back()}
+          className="border px-4 py-2 rounded"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          {saving ? "Saving…" : "Save Changes"}
+        </button>
+      </div>
     </div>
   );
 }

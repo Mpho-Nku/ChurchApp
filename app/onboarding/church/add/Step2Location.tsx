@@ -1,52 +1,31 @@
 "use client";
 
-import { useState } from "react";
-
-export default function Step2Location({ value, onUpdate, onNext, onBack }) {
-  const [city, setCity] = useState(value.city || "");
-  const [province, setProvince] = useState(value.province || "");
-
-  const handleNext = () => {
-    if (!city.trim() || !province.trim()) {
-      alert("Please fill in all location fields");
-      return;
-    }
-
-    onUpdate({ city, province });
-    onNext();
-  };
-
+export default function Step2Location({ formData, setFormData, next, back }) {
   return (
     <div>
-      <h2 className="text-2xl font-semibold mb-3">Church Location</h2>
+      <h2 className="text-xl font-semibold mb-4">Step 2: Location</h2>
 
       <input
         type="text"
-        placeholder="City"
-        className="w-full border rounded-lg px-4 py-3 mb-4"
-        value={city}
-        onChange={(e) => setCity(e.target.value)}
+        placeholder="Township / Location"
+        className="w-full border px-3 py-2 rounded-lg"
+        value={formData.location}
+        onChange={(e) =>
+          setFormData((prev) => ({ ...prev, location: e.target.value }))
+        }
       />
 
-      <input
-        type="text"
-        placeholder="Province"
-        className="w-full border rounded-lg px-4 py-3 mb-6"
-        value={province}
-        onChange={(e) => setProvince(e.target.value)}
-      />
-
-      <div className="flex gap-3">
-        <button
-          onClick={onBack}
-          className="flex-1 bg-gray-200 py-3 rounded-lg">
+      <div className="flex justify-between mt-6">
+        <button type="button" onClick={back} className="border px-4 py-2 rounded-lg">
           Back
         </button>
 
         <button
-          onClick={handleNext}
-          className="flex-1 bg-blue-600 text-white py-3 rounded-lg">
-          Continue
+          type="button"
+          onClick={next}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+        >
+          Next
         </button>
       </div>
     </div>

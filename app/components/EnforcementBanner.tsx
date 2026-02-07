@@ -2,57 +2,48 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import Link from "next/link";
 
 export default function EnforcementBanner() {
-  const [needsChurch, setNeedsChurch] = useState(false);
-  const [needsEvent, setNeedsEvent] = useState(false);
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
-    async function check() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    const load = async () => {
+      // Get logged-in user
+      const { data: auth } = await supabase.auth.getUser();
+      const user = auth?.user;
+      if (!user) return; // not logged in → don't show banner
 
-      if (!user) return;
-
-      const { data: church } = await supabase
+      // Check if user already has a church
+      const { data: churches } = await supabase
         .from("churches")
         .select("id")
-        .eq("created_by", user.id)
-        .single();
+        .eq("owner_id", user.id)
+        .limit(1);
 
-      if (!church) {
-        setNeedsChurch(true);
-        return;
+      // Show banner ONLY if the user has no church
+      if (!churches || churches.length === 0) {
+        setShow(true);
       }
+    };
 
-      const { data: events } = await supabase
-        .from("events")
-        .select("id")
-        .eq("church_id", church.id);
-
-      if (!events || events.length === 0) {
-        setNeedsEvent(true);
-      }
-    }
-    check();
+    load();
   }, []);
 
-  if (!needsChurch && !needsEvent) return null;
+  if (!show) return null;
 
   return (
-    <div className="w-full bg-yellow-100 border-b border-yellow-300 px-4 py-3 text-center text-yellow-900 font-medium">
-      {needsChurch && (
-        <a href="/onboarding/church" className="underline">
-          ⚠️ Please register your church to continue.
-        </a>
-      )}
-
-      {needsEvent && (
-        <a href="/onboarding/events" className="underline">
-          ⚠️ Please add at least 1 event for your church.
-        </a>
-      )}
+    <div className="w-full bg-yellow-50 border-b border-yellow-300 py-3 px-4 text-center">
+      <p className="text-yellow-800 font-medium">
+        ⚠️ Complete your setup to get the best experience.
+        <Link href="/onboarding/church" className="underline ml-2">
+          Register your church
+        </Link>
+        {" or "}
+        <Link href="/events/add" className="underline">
+          share an event you know about.
+        </Link>
+      </p>
     </div>
   );
 }

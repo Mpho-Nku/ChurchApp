@@ -1,7 +1,6 @@
-import { supabaseServer } from "@/lib/supabaseServer";
+import { cookies } from "next/headers";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 
-export async function getPosts() {
-  const supabase = supabaseServer();   // ✔ NOW it is a function
-  const { data } = await supabase.from("posts").select("*");
-  return data;
+export function supabaseServerClient() {
+  return createServerComponentClient({ cookies });
 }

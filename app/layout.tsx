@@ -1,21 +1,27 @@
-import './globals.css';
-import NavBar from '@/components/NavBar';
-import Footer from '@/components/Footer';
-import EnforcementBanner from './components/EnforcementBanner';
-export const metadata = { title: 'St John AFM', description: 'Church app' };
+import "./globals.css";
+import NavBar from "@/components/NavBar";
+import EnforcementBanner from "@/app/components/EnforcementBanner";
+import Footer from "@/components/Footer";
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const metadata = {
+  title: "St John AFM",
+  description: "Church app",
+};
+
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
-          <NavBar />
-           <EnforcementBanner />
-        <main className="max-w-6xl mx-auto px-4 py-6">{children}
-       
-         
-           <Footer />
+      <body className="bg-gray-50">
+        <NavBar />
+
+        {/*  ✅ Enforcement banner is back again globally */}
+        <EnforcementBanner />
+
+        <main className="max-w-6xl mx-auto px-4 py-6">
+          {children}
         </main>
-        
+
+        <Footer />
       </body>
     </html>
   );

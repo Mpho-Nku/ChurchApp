@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -77,7 +77,7 @@ export default function NavBar() {
 
     loadData();
 
-    // live updates
+    // Live updates
     const channel = supabase
       .channel("nav-notifs")
       .on(
@@ -294,16 +294,45 @@ export default function NavBar() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                   >
+
+                    {/* PROFILE PAGE */}
                     <Link
-                      href="/profile"
+                      href={`/profile/${user?.id}`}
                       className="block px-4 py-2 hover:bg-blue-50 text-blue-900"
                       onClick={() => setProfileMenuOpen(false)}
                     >
                       My Profile
                     </Link>
 
+                    {/* DASHBOARD */}
+                    <Link
+                      href="/dashboard"
+                      className="block px-4 py-2 hover:bg-blue-50 text-blue-900"
+                      onClick={() => setProfileMenuOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+
+                    {/* SAVED POSTS */}
+                    <Link
+                      href="/saved"
+                      className="block px-4 py-2 hover:bg-blue-50 text-blue-900"
+                      onClick={() => setProfileMenuOpen(false)}
+                    >
+                      Saved Posts
+                    </Link>
+
+                    {/* SETTINGS  ✅ NEW */}
+                    <Link
+                      href="/settings/profile"
+                      className="block px-4 py-2 hover:bg-blue-50 text-blue-900"
+                      onClick={() => setProfileMenuOpen(false)}
+                    >
+                      Settings
+                    </Link>
+
                     <button
-                      className="w-full text-left px-4 py-2 hover:bg-blue-50 text-blue-900"
+                      className="w-full text-left px-4 py-2 hover:bg-blue-50 text-red-600"
                       onClick={signOut}
                     >
                       Sign out

@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-import { Picker } from "@emoji-mart/react";
+import  Picker  from "@emoji-mart/react";
+
 import data from "@emoji-mart/data";
 
 import CommentItem from "@/components/comment/CommentItem";
