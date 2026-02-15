@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 
 const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
 
-export default function CreatePostClient({ user }: { user: any }) {
+export default function CreatePostPage() {
+  const [user, setUser] = useState<any>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
   const [caption, setCaption] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [video, setVideo] = useState<File | null>(null);
@@ -15,57 +18,84 @@ export default function CreatePostClient({ user }: { user: any }) {
     useState<{ lat: number; lng: number } | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  /* 🔐 LOAD USER */
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data?.user ?? null);
+      setLoadingUser(false);
+    };
+
+    loadUser();
+  }, []);
+
+  if (loadingUser) {
+    return <p className="p-6 text-center">Loading…</p>;
+  }
+
+  if (!user) {
+    return (
+      <p className="p-6 text-center text-red-500">
+        You must be signed in to create a post.
+      </p>
+    );
+  }
+
+  /* 🖼 IMAGE */
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) setImage(e.target.files[0]);
   };
 
+  /* 🎥 VIDEO */
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) setVideo(e.target.files[0]);
   };
 
+  /* 🚀 SUBMIT POST */
   const submitPost = async () => {
     if (!caption && !image && !video) {
-      alert('Please add text, image, or video before posting.');
+      alert('Please add text, image, or video.');
       return;
     }
 
     try {
       setUploading(true);
 
-      let uploadedImageUrl: string | null = null;
-      let uploadedVideoUrl: string | null = null;
+      let imageUrl: string | null = null;
+      let videoUrl: string | null = null;
 
       if (image) {
         const fileName = `${user.id}-${Date.now()}-${image.name}`;
         await supabase.storage.from('post-images').upload(fileName, image);
-        uploadedImageUrl = supabase.storage
-          .from('post-images')
-          .getPublicUrl(fileName).data.publicUrl;
+        imageUrl =
+          supabase.storage.from('post-images').getPublicUrl(fileName).data
+            ?.publicUrl ?? null;
       }
 
       if (video) {
         const fileName = `${user.id}-${Date.now()}-${video.name}`;
         await supabase.storage.from('post-videos').upload(fileName, video);
-        uploadedVideoUrl = supabase.storage
-          .from('post-videos')
-          .getPublicUrl(fileName).data.publicUrl;
+        videoUrl =
+          supabase.storage.from('post-videos').getPublicUrl(fileName).data
+            ?.publicUrl ?? null;
       }
 
       await supabase.from('posts').insert({
         user_id: user.id,
         caption: caption.trim(),
-        images: uploadedImageUrl ? [uploadedImageUrl] : [],
-        video: uploadedVideoUrl,
+        images: imageUrl ? [imageUrl] : [],
+        video: videoUrl,
         location: location ? JSON.stringify(location) : null,
       });
 
-      alert('✅ Post created successfully!');
+      alert('✅ Post created');
       setCaption('');
       setImage(null);
       setVideo(null);
       setLocation(null);
     } catch (err: any) {
-      alert('❌ Upload failed: ' + err.message);
+      console.error(err);
+      alert(err.message);
     } finally {
       setUploading(false);
     }
@@ -77,14 +107,13 @@ export default function CreatePostClient({ user }: { user: any }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <h2 className="text-xl font-semibold text-blue-900">Create a New Post</h2>
+      <h2 className="text-xl font-semibold">Create Post</h2>
 
       <textarea
-        placeholder="What's on your mind?"
         value={caption}
         onChange={(e) => setCaption(e.target.value)}
+        placeholder="What's on your mind?"
         className="w-full p-3 border rounded-lg"
-        rows={3}
       />
 
       <input type="file" accept="image/*" onChange={handleImageChange} />
@@ -97,7 +126,7 @@ export default function CreatePostClient({ user }: { user: any }) {
         disabled={uploading}
         className="w-full bg-blue-600 text-white py-2 rounded-lg"
       >
-        {uploading ? 'Uploading...' : 'Post'}
+        {uploading ? 'Posting…' : 'Post'}
       </button>
     </motion.div>
   );
