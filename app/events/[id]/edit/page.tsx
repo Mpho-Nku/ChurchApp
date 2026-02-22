@@ -176,8 +176,10 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
 
       {/* ✅ Success Popup */}
       <SuccessModal
-        open={saved}
-        message="Changes saved"
+        open={true}
+      message="Event created"
+      primaryText="Go to Events"
+      onPrimary={() => router.push("/events")}
       />
     </>
   );
