@@ -77,7 +77,11 @@ export default function PostDetailPage() {
       )}
 
       {/* Comments */}
-      <PostActions postId={post.id} user={post.profiles} />
+     <PostActions
+  postId={post.id}
+  user={post.profiles}
+  onComment={() => {}}
+/>
     </div>
   );
 }
